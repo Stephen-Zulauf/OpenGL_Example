@@ -9,15 +9,40 @@ bool gQuit = false; //true-> quit
 
 // VAO
 GLuint gVertexArrayObject = 0;
-// VBO
+// VBO1 vectors/colors
 GLuint gVertexBufferObject = 0;
+// IBO/EBO
+GLuint gIndexBufferObject = 0;
+
 //Program object for the shaders(handle to the pipeline that was set up)
 GLuint gPipelineShaderProgram = 0;
 
+//uniform
+float g_uOffset = 0.0f;
 
+/*Error handling*/
+static void GLClearAllErrors() {
+	while (glGetError() != GL_NO_ERROR) {
+
+	}
+}
+
+static bool GLCheckErrorStatus(const char* function, int line) {
+	while (GLenum error = glGetError()) {
+
+		std::cout << "OpenGl Error:" << error 
+			<< "\tLine: " << line 
+			<< "\tFunction: " << function 
+			<< std::endl;
+
+		return true;
+	}
+	return false;
+}
+
+#define GLCheck(x) GLClearAllErrors(); x; GLCheckErrorStatus(#x,__LINE__);
 
 /*function definitions*/
-
 std::string loadShaderFileAsString(const std::string& nFilename) {
 	std::string result = "";
 
@@ -37,11 +62,24 @@ std::string loadShaderFileAsString(const std::string& nFilename) {
 void vertexSpecification() {
 
 	//lives on the cpu
-	const std::vector<GLfloat> vertexPostion{
+
+	const std::vector<GLfloat> vertexData{
 		//x,  y,  z
-		-0.8f, -0.8f, 0.0f, //vertex 1
-		0.8f, -0.8f, 0.0f, //vertex 2
-		0.0f, 0.8f, 0.0f //vertex 3
+		//r,  g,  b
+		
+		//0 vertex
+		-0.5f, -0.5f, 0.0f, //bottom left vertex
+		0.92f, 0.28f, 0.66f,
+		//1 vertex
+		0.5f, -0.5f, 0.0f, //bottom right vertex
+		0.50f, 0.86f, 0.44f,
+		//2 vertex
+		-0.5f, 0.5f, 0.0f, //top left vertex
+		0.77f, 0.00f, 0.97f,
+		//3 vertex
+		0.5f, 0.5f, 0.0f, //top right vertex
+		0.92f, 0.28f, 0.66f,	
+		
 	};
 
 	//create VAO and bind to it
@@ -55,16 +93,27 @@ void vertexSpecification() {
 	//bind to the buffer
 	glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
 	//fill buffer with vertex data
-	glBufferData(GL_ARRAY_BUFFER, vertexPostion.size() * sizeof(GL_FLOAT), vertexPostion.data(), GL_STATIC_DRAW);
-	//enable the vertex array that is bound
+	glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(GLfloat), vertexData.data(), GL_STATIC_DRAW);
+
+	//indexing buffer object(IBO EBO)
+	const std::vector<GLuint> indexBufferData{ 2,0,1,3,2,1 };
+	glGenBuffers(1, &gIndexBufferObject);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIndexBufferObject);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferData.size() * sizeof(GLuint), indexBufferData.data(), GL_STATIC_DRAW);
+	
+	//location data
 	glEnableVertexAttribArray(0);
-	//specify the location and data format of the array of generic vertex attributes at index 
-	//index to use when rendering
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, (void*)0);
+
+	//color info
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, (GLvoid*)(sizeof(GLfloat)*3));
 
 	//cleanup
 	glBindVertexArray(0);
 	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	
 }
 
 GLuint compileShader(GLuint type, const std::string& source) {
@@ -205,6 +254,17 @@ void input() {
 			gQuit = true;
 		}
 	}
+
+	//retrieve keyboard state
+	const Uint8* state = SDL_GetKeyboardState(NULL);
+	if (state[SDL_SCANCODE_UP]) {
+		g_uOffset += 0.01f;
+		std::cout << "g_uOffset: " << g_uOffset << std::endl;
+	}
+	if (state[SDL_SCANCODE_DOWN]) {
+		g_uOffset -= 0.01f;
+		std::cout << "g_uOffset: " << g_uOffset << std::endl;
+	}
 }
 
 void preDraw() {
@@ -216,13 +276,24 @@ void preDraw() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(gPipelineShaderProgram);
+
+	//setup uniform
+	GLint u_location = glGetUniformLocation(gPipelineShaderProgram, "u_Offset");
+	if (u_location >= 0) {
+		glUniform1f(u_location, g_uOffset);
+	}
+	else {
+		std::cout << "ERR could not find uniform location" << std::endl;
+	}
+	
 }
 
 void draw() {
 	glBindVertexArray(gVertexArrayObject);
 	glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
 
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	//glDrawArrays(GL_TRIANGLES, 0, 6);
+	GLCheck(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
 
 	glUseProgram(0);
 }

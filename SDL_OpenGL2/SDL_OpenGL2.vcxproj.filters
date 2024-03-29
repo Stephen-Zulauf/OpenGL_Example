@@ -21,9 +21,15 @@
     <ClCompile Include="..\glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="glmTEST.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="glmTEST.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
