@@ -17,8 +17,9 @@ GLuint gIndexBufferObject = 0;
 //Program object for the shaders(handle to the pipeline that was set up)
 GLuint gPipelineShaderProgram = 0;
 
-//uniform
-float g_uOffset = 0.0f;
+//uniform modifyer
+GLfloat g_uOffset = 0.0f;
+
 
 /*Error handling*/
 static void GLClearAllErrors() {
@@ -278,12 +279,36 @@ void preDraw() {
 	glUseProgram(gPipelineShaderProgram);
 
 	//setup uniform
-	GLint u_location = glGetUniformLocation(gPipelineShaderProgram, "u_Offset");
-	if (u_location >= 0) {
-		glUniform1f(u_location, g_uOffset);
+	//model transformation by translating object to world space
+	glm::mat4 translate = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, g_uOffset));
+
+	//retrieve location
+	GLint u_ModelMatrixLocation = glGetUniformLocation(gPipelineShaderProgram, "u_ModelMatrix");
+
+	//update uniform value at location
+	if (u_ModelMatrixLocation >= 0) {
+		glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &translate[0][0]);
 	}
 	else {
 		std::cout << "ERR could not find uniform location" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	//setup uniform
+	//Projection matrix (in perspective)
+	glm::mat4 perspective = glm::perspective(glm::radians(45.0f), 
+		(float)gScreenWidth/(float)gScreenHight, 0.1f, 10.f);
+
+	//retrieve location
+	GLint u_perspectiveLocation = glGetUniformLocation(gPipelineShaderProgram, "u_Perspective");
+
+	//update uniform value at location
+	if (u_perspectiveLocation >= 0) {
+		glUniformMatrix4fv(u_perspectiveLocation, 1, GL_FALSE, &perspective[0][0]);
+	}
+	else {
+		std::cout << "ERR could not find uniform (perspective) location" << std::endl;
+		exit(EXIT_FAILURE);
 	}
 	
 }
